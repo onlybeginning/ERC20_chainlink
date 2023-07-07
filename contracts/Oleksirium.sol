@@ -2,7 +2,44 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-contract Oleksirium is ERC20 {
-    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
+contract Oleksirium is ERC20, Ownable {
+    AggregatorV3Interface internal priceFeed; // ETH/USD Contract: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+
+    uint256 public tokenPrice;
+
+    event PriceUpdated(uint256 newPrice);
+    
+    constructor(string memory name_, string memory symbol_, address priceFeed_) ERC20(name_, symbol_) {
+        priceFeed = AggregatorV3Interface(priceFeed_);
+    }
+
+    function setTokenPrice(uint256 newPrice_) public onlyOwner {
+        tokenPrice = newPrice_;
+        emit PriceUpdated(newPrice_);
+    }
+
+    function getEthPrice() public view returns (uint256) {
+        int256 EthPrice;
+        (,EthPrice,,,) = priceFeed.latestRoundData();
+        
+        return uint256(EthPrice);
+    }
+
+    function getUsdPrice(uint256 tokenAmount_) public view returns (uint256) {
+        uint256 UsdPrice;
+        UsdPrice = tokenAmount_ * tokenPrice;
+
+        return UsdPrice;
+    }
+
+    function buyToken(uint256 tokenAmount_) public payable {
+        require(tokenAmount_ > 0, "Invalid amount");
+        require(msg.value > 0, "Invalid amount");
+        require(msg.value * getEthPrice() >= getUsdPrice(tokenAmount_), "Insufficient balance");
+
+        _mint(msg.sender, tokenAmount_);
+    }
 }
