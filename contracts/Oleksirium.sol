@@ -67,4 +67,5 @@ contract Oleksirium is ERC20, Ownable {
 // decimals оракла і мого токена
 // деплой
 // веріфай
-// tests
+// tests на езерсканє
+// test
